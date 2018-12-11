@@ -1,4 +1,4 @@
-context("DPA Algorithms")
+context("PRR Algorithm")
 
 # Reference example
 data <- data.frame(time=c(1:25),
@@ -24,7 +24,7 @@ test_that("function returns core mdsstat_test components", {
                                    "params",
                                    "data")))
 })
-test_that("outputs are as expected", {
+test_that("PRR outputs are as expected", {
   expect_equal(a1$test_name, "Proportional Reporting Ratio")
   expect_equal(a1$analysis_of, NA)
   expect_true(a1$status)
@@ -45,7 +45,8 @@ test_that("outputs are as expected", {
   expect_true(all(names(a1$params) %in% c("test_hyp",
                                           "eval_period",
                                           "null_ratio",
-                                          "alpha")))
+                                          "alpha",
+                                          "cont_adj")))
   expect_is(a1$params$test_hyp, "character")
   expect_equal(a1$params$null_ratio, 1)
   expect_equal(a1$params$alpha, 0.05)
@@ -122,7 +123,7 @@ test_that("test does not run on 0 cell counts", {
 a2d <- mds_ts[[3]]
 a2 <- prr(a2d)
 
-test_that("df parameter functions as expected", {
+test_that("PRR df parameter functions as expected", {
   expect_is(a2, "list")
   expect_is(a2, "mdsstat_test")
   expect_true(all(names(a2) %in% c("test_name",
@@ -151,7 +152,8 @@ test_that("df parameter functions as expected", {
   expect_true(all(names(a2$params) %in% c("test_hyp",
                                           "eval_period",
                                           "null_ratio",
-                                          "alpha")))
+                                          "alpha",
+                                          "cont_adj")))
   expect_is(a2$params$test_hyp, "character")
   expect_equal(a2$params$null_ratio, 1)
   expect_equal(a2$params$alpha, 0.05)

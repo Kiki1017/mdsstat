@@ -1,7 +1,7 @@
 Package: mdsstat
 Type: Package
 Title: Statistical Trending for Medical Devices Surveillance
-Version: 0.2.0
+Version: 0.2.1
 Authors@R: person("Gary", "Chung", email="gchung05@gmail.com",
   role=c("aut", "cre"))
 Maintainer: Gary Chung <gchung05@gmail.com>
@@ -15,13 +15,13 @@ Description: A collection of common statistical algorithms used in active
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-Depends: R (>= 3.5.0)
-Imports: utils, stats, graphics, mds, lubridate
-Suggests: testthat, knitr, rmarkdown
-RoxygenNote: 6.1.0
+Depends: R (>= 2.10)
+Imports: utils, stats, mds, lubridate
+Suggests: testthat, knitr
+RoxygenNote: 6.1.1
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2018-09-22 05:34:10 UTC; Gary
+Packaged: 2018-12-11 05:45:36 UTC; gchun
 Author: Gary Chung [aut, cre]
 Repository: CRAN
-Date/Publication: 2018-09-26 17:00:02 UTC
+Date/Publication: 2018-12-11 06:00:02 UTC

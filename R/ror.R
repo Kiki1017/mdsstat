@@ -1,6 +1,6 @@
-#' Proportional Reporting Ratio
+#' Reporting Odds Ratio
 #'
-#' Test on device-events using the proportional reporting ratio (PRR). From
+#' Test on device-events using the reporting odds ratio (ROR). From
 #' the family of disproportionality analyses (DPA) used to generate signals of
 #' disproportionate reporting (SDRs).
 #'
@@ -54,18 +54,26 @@
 #' Example: \code{12L} sums over the last 12 time periods to create the 2x2
 #' contingency table.
 #'
-#' @param null_ratio Numeric PRR value representing the null hypothesis, used
+#' @param null_ratio Numeric ROR value representing the null hypothesis, used
 #' with \code{alpha} to establish the signal status and the p-value.
 #'
-#' Default: \code{1} indicates a null hypothesis of PRR=1 and tests if the
-#' actual PRR is greater than 1.
+#' Default: \code{1} indicates a null hypothesis of ROR=1 and tests if the
+#' actual ROR is greater than 1.
 #'
 #' @param alpha Numeric value representing the statistical alpha used to
 #' establish the signal status.
 #'
 #' Default: \code{0.05} corresponds to the standard alpha value of 5\%.
 #'
-#' @param ... Further arguments passed onto \code{prr} methods
+#' @param cont_adj Numeric value 0 or greater representing the continuity
+#' adjustment to be added to each cell of the 2x2 contingency table. A value
+#' greater than 0 allows for contingency tables with 0 cells to run the
+#' algorithm. A typical non-zero value is 0.5.
+#'
+#' Default: \code{0} adds zero to each cell, thus an unadjusted table. If any
+#' cell of the 2x2 is 0, the algorithm will not run.
+#'
+#' @param ... Further arguments passed onto \code{ror} methods
 #'
 #' @return A named list of class \code{mdsstat_test} object, as follows:
 #' \describe{
@@ -88,20 +96,23 @@
 #'                    nB=as.integer(stats::rnorm(25, 50, 5)),
 #'                    nC=as.integer(stats::rnorm(25, 100, 25)),
 #'                    nD=as.integer(stats::rnorm(25, 200, 25)))
-#' a1 <- prr(data)
+#' a1 <- ror(data)
 #' # Example using an mds_ts object
-#' a2 <- prr(mds_ts[[3]])
+#' a2 <- ror(mds_ts[[3]])
 #'
 #' @references
-#' Evans, S. J. W., Waller, P. C., & Davis, S. (2001). Use of proportional reporting ratios (PRRs) for signal generation from spontaneous adverse drug reaction reports. Pharmacoepidemiology and Drug Safety, 10(6), 483-486. https://doi.org/10.1002/pds.677
+#' Stricker BH, Tijssen JG. Serum sickness-like reactions to cefaclor. J Clin Epidemiol. 1992;45(10):1177-84.
+#'
+#' Bohm R, Klein H.-J. (v2018-10-16). Primer on Disportionality Analysis. OpenVigil http://openvigil.sourcefourge.net/doc/DPA.pdf
+#'
 #' @export
-prr <- function (df, ...) {
-  UseMethod("prr", df)
+ror <- function (df, ...) {
+  UseMethod("ror", df)
 }
 
-#' @describeIn prr PRR on mds_ts data
+#' @describeIn ror ROR on mds_ts data
 #' @export
-prr.mds_ts <- function(
+ror.mds_ts <- function(
   df,
   ts_event=c("Count"="nA"),
   analysis_of=NA,
@@ -128,17 +139,18 @@ prr.mds_ts <- function(
   } else{
     stop("Input mds_ts df does not contain data for disproportionality analysis.")
   }
-  prr.default(out, analysis_of=name, ...)
+  ror.default(out, analysis_of=name, ...)
 }
 
-#' @describeIn prr PRR on general data
+#' @describeIn ror ROR on general data
 #' @export
-prr.default <- function(
+ror.default <- function(
   df,
   analysis_of=NA,
   eval_period=1L,
   null_ratio=1,
   alpha=0.05,
+  cont_adj=0,
   ...
 ){
   # Contingency table primary variables
@@ -149,8 +161,10 @@ prr.default <- function(
   input_param_checker(eval_period, "integer")
   input_param_checker(null_ratio, "numeric")
   input_param_checker(alpha, "numeric")
+  input_param_checker(cont_adj, "numeric")
   if (null_ratio < 1) stop("null_ratio must be 1 or greater")
   if (alpha <= 0 | alpha >= 1) stop("alpha must be in range (0, 1)")
+  if (cont_adj < 0) stop("cont_adj must be 0 or greater")
 
   # Order by time
   df <- df[order(df$time), ]
@@ -167,6 +181,8 @@ prr.default <- function(
       df <- cbind(data.frame(time_start=timeRange[1],
                              time_end=timeRange[2]),
                   data.frame(t(colSums(df[, c2x2], na.rm=T))))
+      # Apply continuity adjustment
+      df[, c2x2] <- df[, c2x2] + cont_adj
     }
   }
   # Return data
@@ -180,20 +196,19 @@ prr.default <- function(
     rr <- NA
     rs <- stats::setNames(F, "contingency table has zero counts")
   } else{
-    # If all conditions are met, run PRR test
-    # Calculate PRR
-    stat <- (df$nA / (df$nA + df$nB)) / (df$nC / (df$nC + df$nD))
-    s <- sqrt((1 / df$nA) + (1 / df$nC) -
-                (1 / (df$nA + df$nB)) - (1 / (df$nC + df$nD)))
+    # If all conditions are met, run ROR test
+    # Calculate ROR
+    stat <- (df$nA / df$nB) / (df$nC / df$nD)
+    s <- sqrt((1 / df$nA) + (1 / df$nB) + (1 / df$nC) + (1 / df$nD))
     # Establish confidence limits
     z <- stats::qnorm(1 - (alpha / 2))
-    cl <- c(stat / exp(z * s), stat * exp(z * s))
+    cl <- c(exp(log(stat) - z * s), exp(log(stat) + z * s))
     p <- min(stats::pnorm((log(null_ratio) - log(stat)) / s) * 2, 1)
     # Determine signal & hypothesis
     sig <- p <= alpha
-    hyp <- paste0("Two-sided test at alpha=", alpha, " of PRR > ", null_ratio)
+    hyp <- paste0("Two-sided test at alpha=", alpha, " of ROR > ", null_ratio)
 
-    rr <- list(statistic=stats::setNames(stat, "PRR"),
+    rr <- list(statistic=stats::setNames(stat, "ROR"),
                lcl=cl[1],
                ucl=cl[2],
                p=p,
@@ -204,14 +219,15 @@ prr.default <- function(
   }
 
   # Return test
-  out <- list(test_name="Proportional Reporting Ratio",
+  out <- list(test_name="Reporting Odds Ratio",
               analysis_of=analysis_of,
               status=rs,
               result=rr,
               params=list(test_hyp=hyp,
                           eval_period=eval_period,
                           null_ratio=null_ratio,
-                          alpha=alpha),
+                          alpha=alpha,
+                          cont_adj=cont_adj),
               data=rd)
   class(out) <- append(class(out), "mdsstat_test")
   return(out)
