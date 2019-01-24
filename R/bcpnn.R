@@ -1,8 +1,28 @@
-#' Reporting Odds Ratio
+#' Bayesian Confidence Propagation Neural Network
 #'
-#' Test on device-events using the reporting odds ratio (ROR). From
+#' Test on device-events using a one-layer BCPNN as proposed by Bate et al
+#' (1998), which assumes beta-distributed probabilities and a normal
+#' approximation of the variance of the information component (IC). From
 #' the family of disproportionality analyses (DPA) used to generate signals of
 #' disproportionate reporting (SDRs).
+#'
+#' \code{null_ratio} and \code{conf_interval} are used together to establish the
+#' signal criteria. The \code{null_ratio} is conceptually similar to the
+#' relative reporting ratio under a null hypothesis of no signal. Common values
+#' are \code{1} and, more conservatively (fewer false signals), \code{2}. The
+#' \code{conf_interval} is the IC confidence interval used to test for a
+#' signal. A value of \code{0.90} returns the 5% and 95% confidence bounds and
+#' tests if the lower bound exceeds \code{null_ratio}. Effectively,
+#' \code{conf_interval=0.90} conducts a one-sided test at the conventional 0.05
+#' alpha level.
+#'
+#' \code{cont_adj} provides the option to allow \code{bcpnn()} to proceed running,
+#' however this is done at the user's discretion because there are adverse
+#' effects of adding a positive number to every cell of the contingency table.
+#' By default, \code{bcpnn()} allows 0 in all cells except D.
+#' It has been suggested that 0.5 may be an appropriate value. However, the
+#' user is cautioned that interpretation may be compromised by adding continuity
+#' adjustments.
 #'
 #' For parameter \code{ts_event}, in the uncommon case where the
 #' device-event count (Cell A) variable is not \code{"nA"}, the name of the
@@ -54,26 +74,40 @@
 #' Example: \code{12} sums over the last 12 time periods to create the 2x2
 #' contingency table.
 #'
-#' @param null_ratio Numeric ROR value representing the null hypothesis, used
-#' with \code{alpha} to establish the signal status and the p-value.
+#' @param null_ratio Numeric value representing the null relative reporting
+#' ratio (RR), used with \code{conf_interval} to establish the signal status.
+#' This \code{null_ratio} is saved in the output as the signal threshold. See
+#' details for more.
 #'
-#' Default: \code{1} indicates a null hypothesis of ROR=1 and tests if the
-#' actual ROR is greater than 1.
+#' Default: \code{1} indicates a null RR of 1 and tests if the lower bound of
+#' the IC \code{conf_interval} exceeds \code{1}.
 #'
-#' @param alpha Numeric value representing the statistical alpha used to
-#' establish the signal status.
+#' @param conf_interval Numeric value between 0 and 1 representing the width of
+#' the IC confidence interval, where the lower bound of the
+#' interval is assessed against the \code{null_ratio}. The interval bounds are
+#' returned as the lcl and ucl. See details for more.
 #'
-#' Default: \code{0.05} corresponds to the standard alpha value of 5\%.
+#' Default: \code{0.90} indicates a 90\% confidence interval with bounds at 5\%
+#' and 95\%. The signal test is against the lower 5\% bound, effectively
+#' creating a one-sided test at the conventional 0.05 alpha level.
 #'
-#' @param cont_adj Numeric value 0 or greater representing the continuity
+#' @param quantiles Vector of quantiles between 0 and 1. \code{bcpnn()} will
+#' return an equal length vector of Gaussian-approximated quantiles from the
+#' posterior distribution of the IC. Specify \code{quantiles=NULL} if no
+#' quantiles are desired.
+#'
+#' Default: \code{c(.05, .95)} corresponds to the 5\% and 95\% quantiles of the
+#' IC.
+#'
+#' @param cont_adj Non-negative number representing the continuity
 #' adjustment to be added to each cell of the 2x2 contingency table. A value
-#' greater than 0 allows for contingency tables with 0 cells to run the
-#' algorithm. A typical non-zero value is 0.5.
+#' greater than 0 allows for contingency tables with a 0 in the D cell to run
+#' the algorithm. Adding a continuity adjustment will adversely affect the
+#' algorithm estimates, user discretion is advised. See details for more.
 #'
-#' Default: \code{0} adds zero to each cell, thus an unadjusted table. If any
-#' cell of the 2x2 is 0, the algorithm will not run.
+#' Default: \code{0} adds zero to each cell, thus an unadjusted table.
 #'
-#' @param ... Further arguments passed onto \code{ror} methods
+#' @param ... Further arguments passed onto \code{bcpnn} methods
 #'
 #' @return A named list of class \code{mdsstat_test} object, as follows:
 #' \describe{
@@ -96,23 +130,25 @@
 #'                    nB=as.integer(stats::rnorm(25, 50, 5)),
 #'                    nC=as.integer(stats::rnorm(25, 100, 25)),
 #'                    nD=as.integer(stats::rnorm(25, 200, 25)))
-#' a1 <- ror(data)
+#' a1 <- bcpnn(data)
 #' # Example using an mds_ts object
-#' a2 <- ror(mds_ts[[3]])
+#' a2 <- bcpnn(mds_ts[[3]])
 #'
 #' @references
-#' Stricker BH, Tijssen JG. Serum sickness-like reactions to cefaclor. J Clin Epidemiol. 1992;45(10):1177-84.
+#' Bate A, Lindquist M, et al. A Bayesian Neural Network Method for Adverse Drug Reaction Signal Generation. European Journal of Clinical Pharmacology, 1998, 54, 315-321.
 #'
-#' Bohm R, Klein H.-J. (v2018-10-16). Primer on Disportionality Analysis. OpenVigil http://openvigil.sourcefourge.net/doc/DPA.pdf
+#' Ahmed I, Poncet A. PhViD: PharmacoVigilance Signal Detection, 2016. R package version 1.0.8.
+#'
+#' Lansner A, Ekeberg Ö. A one-layer feedback artificial neural network with a bayesian learning rule. Int. J. Neural Syst., 1989, 1, 77-87.
 #'
 #' @export
-ror <- function (df, ...) {
-  UseMethod("ror", df)
+bcpnn <- function (df, ...) {
+  UseMethod("bcpnn", df)
 }
 
-#' @describeIn ror ROR on mds_ts data
+#' @describeIn bcpnn BCPNN on mds_ts data
 #' @export
-ror.mds_ts <- function(
+bcpnn.mds_ts <- function(
   df,
   ts_event=c("Count"="nA"),
   analysis_of=NA,
@@ -139,17 +175,18 @@ ror.mds_ts <- function(
   } else{
     stop("Input mds_ts df does not contain data for disproportionality analysis.")
   }
-  ror.default(out, analysis_of=name, ...)
+  bcpnn.default(out, analysis_of=name, ...)
 }
 
-#' @describeIn ror ROR on general data
+#' @describeIn bcpnn BCPNN on general data
 #' @export
-ror.default <- function(
+bcpnn.default <- function(
   df,
   analysis_of=NA,
   eval_period=1,
   null_ratio=1,
-  alpha=0.05,
+  conf_interval=0.90,
+  quantiles=c(.05, .95),
   cont_adj=0,
   ...
 ){
@@ -158,14 +195,20 @@ ror.default <- function(
 
   input_param_checker(df, "data.frame")
   input_param_checker(c("time", c2x2), check_names=df)
-  input_param_checker(null_ratio, "numeric")
-  input_param_checker(alpha, "numeric")
-  input_param_checker(cont_adj, "numeric")
   input_param_checker(eval_period, "numeric", null_ok=F, max_length=1)
+  input_param_checker(null_ratio, "numeric", null_ok=F, max_length=1)
+  input_param_checker(conf_interval, "numeric", null_ok=F, max_length=1)
+  input_param_checker(quantiles, "numeric", null_ok=T)
+  input_param_checker(cont_adj, "numeric", null_ok=F, max_length=1)
   if (eval_period %% 1 != 0) stop("eval_period must be an integer")
   if (null_ratio < 1) stop("null_ratio must be 1 or greater")
-  if (alpha <= 0 | alpha >= 1) stop("alpha must be in range (0, 1)")
-  if (cont_adj < 0) stop("cont_adj must be 0 or greater")
+  if (conf_interval <= 0 | conf_interval >= 1){
+    stop("conf_interval must be in range (0, 1)")}
+  if (any(quantiles <= 0) | any(quantiles >= 1)){
+    stop("quantiles must be in range (0, 1)")
+  }
+  if (cont_adj < 0){
+    stop("cont_adj must be 0 or greater")}
 
   # Order by time
   df <- df[order(df$time), ]
@@ -193,41 +236,73 @@ ror.default <- function(
 
   # Check for non-runnable conditions
   hyp <- "Not run"
-  if(any(df[, c2x2] == 0)){
+  if (any(df[, c("nD")] == 0)){
     rr <- NA
-    rs <- stats::setNames(F, "contingency table has zero counts")
+    rs <- stats::setNames(F, "contingency cell D is zero")
   } else{
-    # If all conditions are met, run ROR test
-    # Calculate ROR
-    stat <- (df$nA / df$nB) / (df$nC / df$nD)
-    s <- sqrt((1 / df$nA) + (1 / df$nB) + (1 / df$nC) + (1 / df$nD))
-    # Establish confidence limits
-    z <- stats::qnorm(1 - (alpha / 2))
-    cl <- c(exp(log(stat) - z * s), exp(log(stat) + z * s))
-    p <- min(stats::pnorm((log(null_ratio) - log(stat)) / s) * 2, 1)
-    # Determine signal & hypothesis
-    sig <- p <= alpha
-    hyp <- paste0("Two-sided test at alpha=", alpha, " of ROR > ", null_ratio)
+    # If all conditions are met, run BCPNN test
+    # Observed and expected
+    N <- unlist(df[, c2x2])
+    E <- E2x2(N)
+    # Row, column, and table marginals
+    nd <- c(rep(sum(N[c(1, 2)]), 2), rep(sum(N[c(3, 4)]), 2))
+    ne <- rep(c(sum(N[c(1, 3)]), sum(N[c(2, 4)])), 2)
+    n <- sum(N)
+    # Interim variables
+    p1 <- nd + 1
+    p2 <- n - nd + 1
+    q1 <- ne + 1
+    q2 <- n - ne + 1
+    r1 <- N + 1
+    r2b <- n - N - 1 + (2 + n) ^ 2 / (q1 * p1)
+    # Expectation (eIC) and variance (vIC) of the information component
+    eIC <- log(2) ^ -1 * (digamma(r1) - digamma(r1 + r2b) -
+                            (digamma(p1) - digamma(p1 + p2) +
+                               digamma(q1) - digamma(q1 + q2)))
+    vIC <- log(2) ^ -2 * (trigamma(r1) - trigamma(r1 + r2b) +
+                            (trigamma(p1) - trigamma(p1 + p2) +
+                               trigamma(q1) - trigamma(q1 + q2)))
+    # Posterior IC estimate
+    IC <- exp(eIC)
+    # p-value
+    p <- stats::pnorm(log(null_ratio), eIC, sqrt(vIC))[1]
+    # Confidence interval limits
+    cl_l <- round((1 - conf_interval) / 2, 3)
+    cl_u <- 1 - cl_l
+    cl <- sapply(c(cl_l, cl_u),
+                 function(x) exp(stats::qnorm(x, eIC[1], sqrt(vIC[1]))))
+    sig <- p <= cl_l
+    hyp <- paste0(1e2 * cl_l, "% quantile of the posterior distribution > ",
+                  null_ratio)
+    # Estimate quantiles
+    qEst <- numeric()
+    if (length(quantiles) > 0){
+      if (all(!is.na(quantiles))){
+        qEst <- sapply(quantiles,
+                       function(x) exp(stats::qnorm(x, eIC[1], sqrt(vIC[1]))))
+        stats::setNames(qEst, quantiles)
+      }
+    }
 
-    rr <- list(statistic=stats::setNames(stat, "ROR"),
+    rr <- list(statistic=stats::setNames(IC[1], "IC"),
                lcl=cl[1],
                ucl=cl[2],
-               p=p,
+               p=stats::setNames(p, "p-value"),
                signal=sig,
-               signal_threshold=stats::setNames(alpha, "critical p-value"),
-               sigma=exp(s))
+               signal_threshold=stats::setNames(null_ratio, "null ratio"),
+               quantiles=qEst)
     rs <- stats::setNames(T, "Success")
   }
 
   # Return test
-  out <- list(test_name="Reporting Odds Ratio",
+  out <- list(test_name="BCPNN",
               analysis_of=analysis_of,
               status=rs,
               result=rr,
               params=list(test_hyp=hyp,
                           eval_period=eval_period,
                           null_ratio=null_ratio,
-                          alpha=alpha,
+                          conf_interval=conf_interval,
                           cont_adj=cont_adj),
               data=rd)
   class(out) <- append(class(out), "mdsstat_test")

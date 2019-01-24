@@ -1,9 +1,12 @@
 Package: mdsstat
 Type: Package
 Title: Statistical Trending for Medical Devices Surveillance
-Version: 0.2.1
-Authors@R: person("Gary", "Chung", email="gchung05@gmail.com",
-  role=c("aut", "cre"))
+Version: 0.2.2
+Authors@R: c(
+    person("Gary", "Chung", email="gchung05@gmail.com", role=c("aut", "cre")),
+    person("Stephane", "Bottine", role="ctb", comment="(derived code from 'SPRT' package)"),
+    person("Ismaïl", "Ahmed", role="ctb", comment="(derived code from 'PhViD' package)"),
+    person("John", "Ihrie", role="ctb", comment="(derived code from 'openEBGM' package)"))
 Maintainer: Gary Chung <gchung05@gmail.com>
 Description: A collection of common statistical algorithms used in active
     surveillance of medical device events. Context includes post-market
@@ -16,12 +19,15 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 2.10)
-Imports: utils, stats, mds, lubridate
+Imports: utils, stats, lubridate, mds
 Suggests: testthat, knitr
 RoxygenNote: 6.1.1
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2018-12-11 05:45:36 UTC; gchun
-Author: Gary Chung [aut, cre]
+Packaged: 2019-01-24 05:12:40 UTC; gchun
+Author: Gary Chung [aut, cre],
+  Stephane Bottine [ctb] ((derived code from 'SPRT' package)),
+  Ismaïl Ahmed [ctb] ((derived code from 'PhViD' package)),
+  John Ihrie [ctb] ((derived code from 'openEBGM' package))
 Repository: CRAN
-Date/Publication: 2018-12-11 06:00:02 UTC
+Date/Publication: 2019-01-24 05:50:20 UTC

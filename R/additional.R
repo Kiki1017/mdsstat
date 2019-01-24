@@ -103,7 +103,10 @@ poisson_rare.mds_ts <- function(
   # Set analysis_of
   if (is.na(analysis_of)){
     name <- paste(names(ts_event), "of",
-                  paste(attributes(df)$nLabels$nA, collapse=" for "))
+                  paste0(attributes(df)$analysis$device_level_source, " ",
+                         attributes(df)$analysis$device_level, ":",
+                         attributes(df)$analysis$event_level_source, " ",
+                         attributes(df)$analysis$event_level))
   } else name <- analysis_of
 
   out <- data.frame(time=df$time,
@@ -124,10 +127,13 @@ poisson_rare.default <- function(
 ){
   input_param_checker(df, "data.frame")
   input_param_checker(c("time", "event"), check_names=df)
-  input_param_checker(eval_period, "integer")
   input_param_checker(zero_rate, "numeric", null_ok=F, max_length=1)
   input_param_checker(p_rate, "numeric", null_ok=F, max_length=1)
   input_param_checker(p_crit, "numeric", null_ok=F, max_length=1)
+  input_param_checker(eval_period, "numeric", null_ok=T, max_length=1)
+  if (!is.null(eval_period)){
+    if (eval_period %% 1 != 0) stop("eval_period must be an integer")
+  }
   if (zero_rate < 0 | zero_rate > 1) stop("zero_rate must be in range [0, 1]")
   if (p_crit < 0 | p_crit > 1) stop("p_crit must be in range [0, 1]")
 
@@ -183,4 +189,28 @@ poisson_rare.default <- function(
               data=rd)
   class(out) <- append(class(out), "mdsstat_test")
   return(out)
+}
+
+#' Calculate expected for 2x2 table of observed
+#' Returns a vector of expected in the same order as input
+#' @param x Vector of length 4 indicating the values in the 4 cells of the 2x2
+#' table in the order A, B, C, D (across, then down)
+#' @return Expected values in a vector of length 4, same order as \code{x}
+#' @keywords internal
+E2x2 <- function(x){
+  tA <- x[1]
+  tB <- x[2]
+  tC <- x[3]
+  tD <- x[4]
+  tA_ <- tA + tC
+  t_A <- tA + tB
+  tD_ <- tB + tD
+  t_D <- tC + tD
+  t_ <- tA_ + tD_
+  eA <- tA_ * t_A / t_
+  eB <- t_A * tD_ / t_
+  eC <- tA_ * t_D / t_
+  eD <- tD_ * t_D / t_
+  return(stats::setNames(c(eA, eB, eC, eD),
+                         c("eA", "eB", "eC", "eD")))
 }
