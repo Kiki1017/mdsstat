@@ -11,7 +11,6 @@ test_as_row <- function(
   df
 ){
   input_param_checker(df, "mdsstat_test")
-
   # Set eval period to length of time series as default behavior
   eval_period <- ifelse(is.null(df$params$eval_period), nrow(df$data$data),
                         df$params$eval_period)
@@ -68,15 +67,13 @@ test_as_row <- function(
 #' details and examples for more.
 #' @return Validated list of instructions that may be used in the
 #' \code{\link{run_algos}} function.
-#' @details Valid list names (algorithm function names in \code{mdsstat}) are
-#' currently \code{\link{shewhart}}, \code{\link{prr}}, and
-#' \code{\link{poisson_rare}}. Each algorithm may be named multiple times (to
+#' @details Each algorithm may be named multiple times (to
 #' allow running of multiple parameter settings). Do not specify the \code{df}
 #' parameter.
 #' @examples
 #' x <- list(prr=list(),
-#'   shewhart=list(),
-#'   shewhart=list(ts_event=c(Rate="rate"), we_rule=2L),
+#'   xbar=list(),
+#'   xbar=list(ts_event=c(Rate="rate"), we_rule=2),
 #'   poisson_rare=list(p_rate=0.3))
 #' define_algos(x)
 #' @export
@@ -86,9 +83,10 @@ define_algos <- function(
   input_param_checker(algos, "list")
 
   # Each list item must be an algorithm in mdsstat
-  algolist <- c("poisson_rare", "prr", "shewhart",
+  algolist <- c("poisson_rare", "prr", "shewhart", "xbar",
                 "cusum", "ror",
-                "sprt", "gps", "bcpnn")
+                "sprt", "gps", "bcpnn",
+                "ewma", "cp_mean")
   # algolist <- ls("package:mdsstat")[grepl("\\.mds_ts$", ls("package:mdsstat"))]
   # algolist <- gsub("\\.mds_ts$", "", algolist)
   if (!all(names(algos) %in% algolist)){
@@ -159,8 +157,8 @@ define_algos <- function(
 #' data <- mds_ts[[1]]
 #' data$rate <- data$nA / data$exposure
 #' x <- list(prr=list(),
-#'   shewhart=list(),
-#'   shewhart=list(ts_event=c(Rate="rate"), we_rule=2L),
+#'   xbar=list(),
+#'   xbar=list(ts_event=c(Rate="rate"), we_rule=2),
 #'   poisson_rare=list(p_rate=0.3))
 #' algos <- define_algos(x)
 #' run_algos(data, algos)
@@ -221,7 +219,7 @@ run_algos.default <- function(
                "skip, stop, warn"))
   }
   # Define DPA algorithms currently in mdsstat
-  dpaalgos <- c("prr", "ror", "gps")
+  dpaalgos <- c("prr", "ror", "gps", "bcpnn")
 
   if (dataframe){
     stats <- data.frame()
@@ -244,14 +242,25 @@ run_algos.default <- function(
     }
     # Run algorithm
     if (!flag){
-      test <- do.call(algo, c(list(df=data),algos[[i]]))
+      test <- do.call(algo, c(list(df=data), algos[[i]]))
+      test$ts_id <- attributes(data)$analysis$id
       if (dataframe){
-        stats <- rbind(stats, test_as_row(test))
+        ts_row <- test_as_row(test)
+        ts_row$ts_id <- test$ts_id
+        stats <- rbind(stats, ts_row)
       } else stats[[i]] <- test
     }
   }
 
   if (dataframe) class(stats) <- append(class(stats), "mdsstat_tests")
+
+  # # Final check for invalid input data
+  # if (is.data.frame(stats)){
+  #   if (nrow(stats) == 0) stop("Input dataset is invalid format.")
+  # } else if (is.list(stats)){
+  #   if (length(stats[[1]]) == 0) stop("Input dataset is invalid format.")
+  # }
+
   return(stats)
 }
 

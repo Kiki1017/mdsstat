@@ -12,7 +12,7 @@ shewhart(df, ...)
   analysis_of = NA, ...)
 
 \method{shewhart}{default}(df, analysis_of = NA, eval_period = NULL,
-  zero_rate = 1/3, we_rule = 1L, ...)
+  zero_rate = 1/3, we_rule = 1, mu = NULL, sigma = NULL, ...)
 }
 \arguments{
 \item{df}{Required input data frame of class \code{mds_ts} or, for generic
@@ -64,6 +64,21 @@ Western Electric rule to use. See details for descriptions.
 
 Default: \code{1} represents the first Western Electric rule of one point
 over the 3-sigma limit.}
+
+\item{mu}{Optional value of the in-control process mean, typically measured
+from historical data.
+
+Default: \code{NULL} estimates the in-control process mean from timepoints
+prior to the most recent timepoint in the time series. The most recent
+measurement is then tested using this estimate.}
+
+\item{sigma}{Optional value of the in-control process standard deviation,
+typically measured from historical data.
+
+Default: \code{NULL} estimates the in-control process standard deviation
+from timepoints prior to the most recent timepoint in the time series using
+a moving range calculation assuming an n=2 sampling approach. The most recent
+measurement is then tested using this estimate.}
 }
 \value{
 A named list of class \code{mdsstat_test} object, as follows:
@@ -85,7 +100,7 @@ Test on device-events using the Shewhart x-bar control chart. Includes
 the first 4 Western Electric rules common to statistical process control.
 }
 \details{
-Function \code{shewhart()} is a standard implementation of the x-bar
+Function \code{shewhart()} is an implementation of the x-bar
 Control Chart test from the family of statistical process control tests
 originally proposed by Walter Shewhart.
 
@@ -103,14 +118,14 @@ limit. \code{4} is nine consecutive points over the process mean.
 
 \examples{
 # Basic Example
-data <- data.frame(time=c(1:25), event=as.integer(stats::rnorm(25, 100, 25)))
-a1 <- shewhart(data)
+#  data <- data.frame(time=c(1:25), event=as.integer(stats::rnorm(25, 100, 25)))
+# a1 <- shewhart(data)
 # Example using an mds_ts object
-a2 <- shewhart(mds_ts[[3]])
+# a2 <- shewhart(mds_ts[[3]])
 # Example using a derived rate as the "event"
-data <- mds_ts[[3]]
-data$rate <- ifelse(is.na(data$nA), 0, data$nA) / data$exposure
-a3 <- shewhart(data, c(Rate="rate"))
+# data <- mds_ts[[3]]
+# data$rate <- ifelse(is.na(data$nA), 0, data$nA) / data$exposure
+# a3 <- shewhart(data, c(Rate="rate"))
 
 }
 \references{
