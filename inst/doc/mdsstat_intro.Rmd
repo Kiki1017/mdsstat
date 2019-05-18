@@ -67,12 +67,14 @@ Function            Description
 `cusum()`           Cumulative Sum Control Chart with 4 Western Electric Rules
 `ewma()`            Exponentially Weighted Moving Average
 `sprt()`            Sequential Probability Ratio Test
+`poisson_maxsprt()` Poisson MaxSPRT
 `prr()`             Proportional Reporting Ratio
 `ror()`             Reporting Odds Ratio
 `gps()`             Gamma Poisson Shrinker (containing EBGM and EB05)
 `bcpnn()`           Bayesian Confidence Propagation Neural Network
+`lrt()`             Likelihoood-Ratio Test
 `cp_mean()`         Mean-Shift Changepoint
-`poisson_rare()`    Poisson Test on Rare Events
+`poisson_rare()`    Generic Poisson Test
 
 These are planned/proposed algorithms to add:
 
@@ -80,7 +82,6 @@ Function            Description
 -----------------   ------------------------------------------------------------
 `chi_square()`      Chi-Square Test
 `changepoint()`     Additional changepoint variants
-`maxsprt()`         Maximized SPRT (likely Poisson variant)
 `cox_stuart()`      Cox-Stuart Test
 `uptrend()`         Linear Uptrend by Linear Modeling
 

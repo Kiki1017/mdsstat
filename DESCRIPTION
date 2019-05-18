@@ -1,7 +1,7 @@
 Package: mdsstat
 Type: Package
 Title: Statistical Trending for Medical Devices Surveillance
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: c(
     person("Gary", "Chung", email="gchung05@gmail.com", role=c("aut", "cre")),
     person("Zhiheng", "Xu", role="ctb", comment="derived code for `cp_mean()`"),
@@ -20,16 +20,16 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 2.10)
-Imports: utils, stats, lubridate, mds
+Imports: utils, stats, lubridate, Sequential, mds
 Suggests: testthat, knitr
 RoxygenNote: 6.1.1
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2019-04-11 16:24:38 UTC; gchung4
+Packaged: 2019-05-18 12:55:07 UTC; gchung
 Author: Gary Chung [aut, cre],
   Zhiheng Xu [ctb] (derived code for `cp_mean()`),
   Stephane Bottine [ctb] (derived code from 'SPRT' package),
   Ismaïl Ahmed [ctb] (derived code from 'PhViD' package),
   John Ihrie [ctb] (derived code from 'openEBGM' package)
 Repository: CRAN
-Date/Publication: 2019-04-11 16:42:39 UTC
+Date/Publication: 2019-05-18 13:10:03 UTC
